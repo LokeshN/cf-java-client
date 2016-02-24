@@ -1709,6 +1709,25 @@ public final class DefaultApplicationsTest {
 
     }
 
+    public static final class PushInvalid extends AbstractOperationsApiTest<Void> {
+
+        private final DefaultApplications applications = new DefaultApplications(this.cloudFoundryClient, this.loggingClient, Mono.just(TEST_SPACE_ID));
+
+        @Override
+        protected void assertions(TestSubscriber<Void> testSubscriber) throws Exception {
+            testSubscriber
+                .assertError(RequestValidationException.class, "Request is invalid: name must be specified, application bits must be specified");
+        }
+
+        @Override
+        protected Mono<Void> invoke() {
+            return this.applications
+                .push(PushApplicationRequest.builder()
+                    .build());
+        }
+
+    }
+
     public static final class RenameNoApp extends AbstractOperationsApiTest<Void> {
 
         private final DefaultApplications applications = new DefaultApplications(this.cloudFoundryClient, this.loggingClient, Mono.just(TEST_SPACE_ID));

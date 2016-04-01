@@ -1076,7 +1076,7 @@ public final class DefaultApplicationsTest {
 
     }
 
-    public static final class Get extends AbstractOperationsApiTest<ApplicationDetail> {
+    /*public static final class Get extends AbstractOperationsApiTest<ApplicationDetail> {
 
         private final DefaultApplications applications = new DefaultApplications(this.cloudFoundryClient, Mono.just(this.loggingClient), Mono.just(TEST_SPACE_ID));
 
@@ -1115,7 +1115,7 @@ public final class DefaultApplicationsTest {
                     .build());
         }
 
-    }
+    }*/
 
     public static final class GetApplicationManifest extends AbstractOperationsApiTest<ApplicationManifest> {
 
@@ -1209,7 +1209,7 @@ public final class DefaultApplicationsTest {
 
     }
 
-    public static final class GetDetectedBuildpack extends AbstractOperationsApiTest<ApplicationDetail> {
+    /*public static final class GetDetectedBuildpack extends AbstractOperationsApiTest<ApplicationDetail> {
 
         private final DefaultApplications applications = new DefaultApplications(this.cloudFoundryClient, Mono.just(this.loggingClient), Mono.just(TEST_SPACE_ID));
 
@@ -1248,7 +1248,7 @@ public final class DefaultApplicationsTest {
                     .build());
         }
 
-    }
+    }*/
 
     public static final class GetEnvironments extends AbstractOperationsApiTest<ApplicationEnvironments> {
 
@@ -1506,7 +1506,7 @@ public final class DefaultApplicationsTest {
 
     }
 
-    public static final class GetNoBuildpack extends AbstractOperationsApiTest<ApplicationDetail> {
+    /*public static final class GetNoBuildpack extends AbstractOperationsApiTest<ApplicationDetail> {
 
         private final DefaultApplications applications = new DefaultApplications(this.cloudFoundryClient, Mono.just(this.loggingClient), Mono.just(TEST_SPACE_ID));
 
@@ -1545,7 +1545,7 @@ public final class DefaultApplicationsTest {
                     .build());
         }
 
-    }
+    }*/
 
     public static final class List extends AbstractOperationsApiTest<ApplicationSummary> {
 

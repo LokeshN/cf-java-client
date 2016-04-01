@@ -19,8 +19,11 @@ package org.cloudfoundry.spring.client.v2.routemappings;
 import lombok.ToString;
 import org.cloudfoundry.client.v2.routemappings.CreateRouteMappingRequest;
 import org.cloudfoundry.client.v2.routemappings.CreateRouteMappingResponse;
+import org.cloudfoundry.client.v2.routemappings.DeleteRouteMappingRequest;
+import org.cloudfoundry.client.v2.routemappings.DeleteRouteMappingResponse;
 import org.cloudfoundry.client.v2.routemappings.RouteMappings;
 import org.cloudfoundry.spring.util.AbstractSpringOperations;
+import org.cloudfoundry.spring.util.QueryBuilder;
 import org.springframework.web.client.RestOperations;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SchedulerGroup;
@@ -49,4 +52,11 @@ public final class SpringRouteMappings extends AbstractSpringOperations implemen
         return post(request, CreateRouteMappingResponse.class, builder -> builder.pathSegment("v2", "route_mappings"));
     }
 
+    @Override
+    public Mono<DeleteRouteMappingResponse> delete(DeleteRouteMappingRequest request) {
+        return delete(request, DeleteRouteMappingResponse.class, builder -> {
+            builder.pathSegment("v2", "route_mappings", request.getRouteMappingId());
+            QueryBuilder.augment(builder, request);
+        });
+    }
 }

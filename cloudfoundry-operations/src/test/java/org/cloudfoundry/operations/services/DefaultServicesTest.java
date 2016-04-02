@@ -17,24 +17,33 @@
 package org.cloudfoundry.operations.services;
 
 import org.cloudfoundry.client.CloudFoundryClient;
+import org.cloudfoundry.client.v2.Resource;
 import org.cloudfoundry.client.v2.applications.ApplicationResource;
 import org.cloudfoundry.client.v2.servicebindings.CreateServiceBindingRequest;
 import org.cloudfoundry.client.v2.servicebindings.CreateServiceBindingResponse;
+import org.cloudfoundry.client.v2.servicebindings.DeleteServiceBindingRequest;
+import org.cloudfoundry.client.v2.servicebindings.ListServiceBindingsRequest;
+import org.cloudfoundry.client.v2.servicebindings.ListServiceBindingsResponse;
+import org.cloudfoundry.client.v2.servicebindings.ServiceBindingResource;
+import org.cloudfoundry.client.v2.servicebindings.ServiceBindings;
 import org.cloudfoundry.client.v2.serviceinstances.ServiceInstanceResource;
 import org.cloudfoundry.client.v2.spaces.ListSpaceApplicationsRequest;
 import org.cloudfoundry.client.v2.spaces.ListSpaceApplicationsResponse;
 import org.cloudfoundry.client.v2.spaces.ListSpaceServiceInstancesRequest;
 import org.cloudfoundry.client.v2.spaces.ListSpaceServiceInstancesResponse;
 import org.cloudfoundry.operations.AbstractOperationsApiTest;
+import org.cloudfoundry.util.DateUtils;
 import org.cloudfoundry.util.test.TestSubscriber;
 import org.junit.Before;
 import reactor.core.publisher.Mono;
 
 import java.util.Collections;
+import java.util.Date;
 import java.util.Map;
 
 import static org.cloudfoundry.util.test.TestObjects.fill;
 import static org.cloudfoundry.util.test.TestObjects.fillPage;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.when;
 
 public final class DefaultServicesTest {
@@ -75,6 +84,36 @@ public final class DefaultServicesTest {
             .thenReturn(Mono
                 .just(fill(CreateServiceBindingResponse.builder(), "service-binding-")
                     .build()));
+    }
+
+    private static void requestUnbindService(CloudFoundryClient cloudFoundryClient, String applicationId, String serviceInstanceId, String serviceBindingId) {
+
+        ServiceBindings serviceBindings = cloudFoundryClient.serviceBindings();
+
+        Resource.Metadata metadata = Resource.Metadata.builder().
+            id(serviceBindingId)
+            .build();
+        //create dummy service binding resource with a default metadata
+        ServiceBindingResource resource = ServiceBindingResource.builder()
+            .metadata(metadata)
+            .build();
+
+        when(serviceBindings
+            .list(fillPage(ListServiceBindingsRequest.builder())
+                .applicationId(applicationId)
+                .serviceInstanceId(serviceInstanceId)
+                .page(any(Integer.class))
+                .build()))
+            .thenReturn(Mono
+                .just(fillPage(ListServiceBindingsResponse.builder().resource(resource))
+                    .build()));;
+
+        when(serviceBindings
+            .delete(DeleteServiceBindingRequest.builder()
+            .serviceBindingId(serviceBindingId)
+            .build()))
+            .thenReturn(Mono.<Void>empty());
+
     }
 
     private static void requestSpaceServiceInstances(CloudFoundryClient cloudFoundryClient, String serviceName, String spaceId) {
@@ -179,10 +218,94 @@ public final class DefaultServicesTest {
                 .bind(BindServiceRequest.builder()
                     .applicationName("test-application-name")
                     .serviceName("test-service-name")
-                    .parameter("test-parameter-key", "test-parameter-value")
                     .build());
         }
 
     }
+
+    public static final class UnbindService extends AbstractOperationsApiTest<Void> {
+
+        private final DefaultServices services = new DefaultServices(this.cloudFoundryClient, Mono.just(TEST_SPACE_ID));
+
+        @Before
+        public void setUp() throws Exception {
+            final String appName = "test-application-name";
+            final String serviceName = "test-service-name";
+            final String serviceBindingId = "test-service-binding-id";
+            requestApplications(this.cloudFoundryClient, appName, TEST_SPACE_ID);
+            requestSpaceServiceInstances(this.cloudFoundryClient, serviceName, TEST_SPACE_ID);
+            requestUnbindService(this.cloudFoundryClient, appName, serviceName, serviceBindingId);
+        }
+
+        @Override
+        protected void assertions(TestSubscriber<Void> testSubscriber) throws Exception {
+            // Expects onComplete() with no onNext()
+        }
+
+        @Override
+        protected Mono<Void> invoke() {
+            return this.services
+                .unbind(UnbindServiceRequest.builder()
+                    .applicationName("test-application-name")
+                    .serviceName("test-service-name")
+                    .build());
+        }
+
+    }
+
+    public static final class UnbindServiceNoApplication extends AbstractOperationsApiTest<Void> {
+
+        private final DefaultServices services = new DefaultServices(this.cloudFoundryClient, Mono.just(TEST_SPACE_ID));
+
+        @Before
+        public void setUp() throws Exception {
+            requestApplicationsEmpty(this.cloudFoundryClient, "test-application-name", TEST_SPACE_ID);
+            requestSpaceServiceInstances(this.cloudFoundryClient, "test-service-name", TEST_SPACE_ID);
+        }
+
+        @Override
+        protected void assertions(TestSubscriber<Void> testSubscriber) throws Exception {
+            testSubscriber
+                .assertError(IllegalArgumentException.class, "Application test-application-name does not exist");
+        }
+
+        @Override
+        protected Mono<Void> invoke() {
+            return this.services
+                .unbind(UnbindServiceRequest.builder()
+                    .applicationName("test-application-name")
+                    .serviceName("test-service-name")
+                    .build());
+        }
+
+    }
+
+    public static final class UnbindServiceNoService extends AbstractOperationsApiTest<Void> {
+
+        private final DefaultServices services = new DefaultServices(this.cloudFoundryClient, Mono.just(TEST_SPACE_ID));
+
+        @Before
+        public void setUp() throws Exception {
+            requestApplications(this.cloudFoundryClient, "test-application-name", TEST_SPACE_ID);
+            requestSpaceServiceInstancesEmpty(this.cloudFoundryClient, "test-service-name", TEST_SPACE_ID);
+        }
+
+        @Override
+        protected void assertions(TestSubscriber<Void> testSubscriber) throws Exception {
+            testSubscriber
+                .assertError(IllegalArgumentException.class, "Service test-service-name does not exist");
+        }
+
+        @Override
+        protected Mono<Void> invoke() {
+            return this.services
+                .unbind(UnbindServiceRequest.builder()
+                    .applicationName("test-application-name")
+                    .serviceName("test-service-name")
+                    .build());
+        }
+
+    }
+
 
 }

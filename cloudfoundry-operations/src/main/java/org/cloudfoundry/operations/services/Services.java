@@ -16,7 +16,6 @@
 
 package org.cloudfoundry.operations.services;
 
-import org.cloudfoundry.operations.routes.CheckRouteRequest;
 import reactor.core.publisher.Mono;
 
 /**
@@ -31,5 +30,13 @@ public interface Services {
      * @return a completion indicator
      */
     Mono<Void> bind(BindServiceRequest request);
+
+    /**
+     * Unbind a service from an application
+     *
+     * @param request the bind service request
+     * @return a completion indicator
+     */
+    Mono<Void> unbind(UnbindServiceRequest request);
 
 }

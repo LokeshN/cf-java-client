@@ -27,11 +27,21 @@ import org.junit.Before;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 
+import java.util.NoSuchElementException;
+
 import static org.cloudfoundry.util.test.TestObjects.fill;
 import static org.cloudfoundry.util.test.TestObjects.fillPage;
 import static org.mockito.Mockito.when;
 
 public final class DefaultServiceAdminTest {
+
+    private static void requestDeleteServiceBroker(CloudFoundryClient cloudFoundryClient, String serviceBrokerId) {
+        when(cloudFoundryClient.serviceBrokers()
+            .delete(org.cloudfoundry.client.v2.servicebrokers.DeleteServiceBrokerRequest.builder()
+                .serviceBrokerId(serviceBrokerId)
+                .build()))
+            .thenReturn(Mono.empty());
+    }
 
     private static void requestListServiceBrokers(CloudFoundryClient cloudFoundryClient) {
         when(cloudFoundryClient.serviceBrokers()
@@ -47,6 +57,32 @@ public final class DefaultServiceAdminTest {
                     .build()));
     }
 
+    private static void requestListServiceBrokers(CloudFoundryClient cloudFoundryClient, String serviceBrokerName) {
+        when(cloudFoundryClient.serviceBrokers()
+            .list(ListServiceBrokersRequest.builder()
+                .name(serviceBrokerName)
+                .page(1)
+                .build()))
+            .thenReturn(Mono
+                .just(fillPage(ListServiceBrokersResponse.builder())
+                    .resource(fill(ServiceBrokerResource.builder(), "service-broker-")
+                        .entity(fill(ServiceBrokerEntity.builder(), "service-broker-resource-")
+                            .build())
+                        .build())
+                    .build()));
+    }
+
+    private static void requestListServiceBrokersEmpty(CloudFoundryClient cloudFoundryClient, String serviceBrokerName) {
+        when(cloudFoundryClient.serviceBrokers()
+            .list(ListServiceBrokersRequest.builder()
+                .name(serviceBrokerName)
+                .page(1)
+                .build()))
+            .thenReturn(Mono
+                .just(fillPage(ListServiceBrokersResponse.builder())
+                    .build()));
+    }
+
     private static void requestListServiceBrokersEmpty(CloudFoundryClient cloudFoundryClient) {
         when(cloudFoundryClient.serviceBrokers()
             .list(ListServiceBrokersRequest.builder()
@@ -55,6 +91,57 @@ public final class DefaultServiceAdminTest {
             .thenReturn(Mono
                 .just(fillPage(ListServiceBrokersResponse.builder())
                     .build()));
+    }
+
+    public static final class DeleteServiceBroker extends AbstractOperationsApiTest<Void> {
+
+        private final DefaultServiceAdmin serviceAdmin = new DefaultServiceAdmin(this.cloudFoundryClient);
+
+        @Before
+        public void setUp() throws Exception {
+            requestListServiceBrokers(this.cloudFoundryClient, "test-service-broker-name");
+            requestDeleteServiceBroker(this.cloudFoundryClient, "test-service-broker-id");
+        }
+
+        @Override
+        protected void assertions(TestSubscriber<Void> testSubscriber) {
+            // Expects onComplete() with no onNext()
+        }
+
+        @Override
+        protected Mono<Void> invoke() {
+            return this.serviceAdmin
+                .deleteServiceBroker(DeleteServiceBrokerRequest.builder()
+                    .name("test-service-broker-name")
+                    .build());
+        }
+
+    }
+
+    public static final class DeleteServiceBrokerNoServiceBroker extends AbstractOperationsApiTest<Void> {
+
+        private final DefaultServiceAdmin serviceAdmin = new DefaultServiceAdmin(this.cloudFoundryClient);
+
+        @Before
+        public void setUp() throws Exception {
+            requestListServiceBrokersEmpty(this.cloudFoundryClient, "test-service-broker-name");
+            requestDeleteServiceBroker(this.cloudFoundryClient, "test-service-broker-id");
+        }
+
+        @Override
+        protected void assertions(TestSubscriber<Void> testSubscriber) {
+            testSubscriber
+                .assertError(IllegalArgumentException.class, String.format("Service broker %s does not exist", "test-service-broker-name"));
+        }
+
+        @Override
+        protected Mono<Void> invoke() {
+            return this.serviceAdmin
+                .deleteServiceBroker(DeleteServiceBrokerRequest.builder()
+                    .name("test-service-broker-name")
+                    .build());
+        }
+
     }
 
     public static final class ListServiceBrokers extends AbstractOperationsApiTest<ServiceBroker> {

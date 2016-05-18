@@ -14,42 +14,40 @@
  * limitations under the License.
  */
 
-package org.cloudfoundry.client.v2.servicebrokers;
+package org.cloudfoundry.operations.serviceadmin;
 
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Builder;
 import lombok.Data;
-import lombok.Getter;
 import org.cloudfoundry.Validatable;
 import org.cloudfoundry.ValidationResult;
 
+/**
+ * Request options for the delete service broker operation
+ */
 @Data
 public final class DeleteServiceBrokerRequest implements Validatable {
 
     /**
-     * The service broker id
+     *  The name of the service broker
      *
-     * @param serviceBrokerId the service broker id
-     * @return the service broker id
+     *  @param name the name
+     *  @return the name
      */
-    @Getter(onMethod = @__(@JsonIgnore))
-    private final String serviceBrokerId;
+    private final String name;
 
     @Builder
-    DeleteServiceBrokerRequest(String serviceBrokerId) {
-        this.serviceBrokerId = serviceBrokerId;
+    DeleteServiceBrokerRequest(String name) {
+        this.name = name;
     }
 
     @Override
     public ValidationResult isValid() {
         ValidationResult.ValidationResultBuilder builder = ValidationResult.builder();
 
-        if (this.serviceBrokerId == null) {
-            builder.message("service broker id must be specified");
+        if(this.name == null) {
+            builder.message("name must be specified");
         }
 
         return builder.build();
     }
-
 }

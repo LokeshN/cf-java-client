@@ -20,9 +20,14 @@ import org.cloudfoundry.client.CloudFoundryClient;
 import org.cloudfoundry.client.v2.servicebrokers.ListServiceBrokersRequest;
 import org.cloudfoundry.client.v2.servicebrokers.ServiceBrokerEntity;
 import org.cloudfoundry.client.v2.servicebrokers.ServiceBrokerResource;
+import org.cloudfoundry.util.ExceptionUtils;
 import org.cloudfoundry.util.PaginationUtils;
 import org.cloudfoundry.util.ResourceUtils;
+import org.cloudfoundry.util.ValidationUtils;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.util.NoSuchElementException;
 
 public final class DefaultServiceAdmin implements ServiceAdmin {
 
@@ -33,9 +38,35 @@ public final class DefaultServiceAdmin implements ServiceAdmin {
     }
 
     @Override
+    public Mono<Void> deleteServiceBroker(DeleteServiceBrokerRequest request) {
+        return ValidationUtils
+            .validate(request)
+            .then(validRequest -> getServiceBrokerId(this.cloudFoundryClient, validRequest.getName()))
+            .then(serviceBrokerId -> requestDeleteServiceBroker(this.cloudFoundryClient, serviceBrokerId));
+    }
+
+    @Override
     public Flux<ServiceBroker> listServiceBrokers() {
         return requestServiceBrokers(this.cloudFoundryClient)
             .map(this::toServiceBroker);
+    }
+
+    private static Mono<ServiceBrokerResource> getServiceBroker(CloudFoundryClient cloudFoundryClient, String serviceBrokerName) {
+        return requestListServiceBrokers(cloudFoundryClient, serviceBrokerName)
+            .single()
+            .otherwise(ExceptionUtils.replace(NoSuchElementException.class, () -> ExceptionUtils.illegalArgument("Service broker %s does not exist", serviceBrokerName)));
+    }
+
+    private static Mono<String> getServiceBrokerId(CloudFoundryClient cloudFoundryClient, String serviceBrokerName) {
+        return getServiceBroker(cloudFoundryClient, serviceBrokerName)
+            .map(ResourceUtils::getId);
+    }
+
+    private static Mono<Void> requestDeleteServiceBroker(CloudFoundryClient cloudFoundryClient, String serviceBrokerId) {
+        return cloudFoundryClient.serviceBrokers()
+            .delete(org.cloudfoundry.client.v2.servicebrokers.DeleteServiceBrokerRequest.builder()
+                .serviceBrokerId(serviceBrokerId)
+                .build());
     }
 
     private static Flux<ServiceBrokerResource> requestServiceBrokers(CloudFoundryClient cloudFoundryClient) {
@@ -43,6 +74,15 @@ public final class DefaultServiceAdmin implements ServiceAdmin {
             .requestResources(page -> cloudFoundryClient.serviceBrokers()
                 .list(ListServiceBrokersRequest.builder()
                     .page(page)
+                    .build()));
+    }
+
+    private static Flux<ServiceBrokerResource> requestListServiceBrokers(CloudFoundryClient cloudFoundryClient, String serviceBrokerName) {
+        return PaginationUtils
+            .requestResources(page -> cloudFoundryClient.serviceBrokers()
+                .list(ListServiceBrokersRequest.builder()
+                    .page(page)
+                    .name(serviceBrokerName)
                     .build()));
     }
 
